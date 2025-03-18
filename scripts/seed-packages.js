@@ -1,8 +1,9 @@
 const admin = require('firebase-admin');
 const path = require('path');
-require('dotenv').config({ path: path.resolve(__dirname, '../.env.local') });
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
 // Check if service account credentials are provided
+console.log(process.env);
 if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
   console.error('Error: FIREBASE_SERVICE_ACCOUNT environment variable is not set');
   console.log('Please add your Firebase service account key to .env.local:');

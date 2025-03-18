@@ -188,7 +188,7 @@ Coming soon:
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /packages/{package} {
+    match /packages/{packageId} {
       allow read: if true;  // Anyone can read packages
       allow write: if false;  // Only admins via Functions can write
     }
