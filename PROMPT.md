@@ -1,7 +1,3 @@
-Great! I’ll generate a detailed prompt for Cursor IDE and Claude to help you build a fully functional Space Travel Booking app using Firebase and Next.js. This will include user authentication, flight selection, real-time price updates via a Node function, and a simulated payment system. Additionally, we’ll integrate AI-powered recommendations, a chatbot, and basic AR functionality for compatible devices, all wrapped in a futuristic yet minimal design inspired by Dubai.
-
-I’ll get back to you with the prompt shortly.
-
 # Space Travel Booking App – Next.js + Firebase Implementation
 
 This project is a **futuristic space travel booking web app** with a Next.js front end and Firebase back end. We’ll build features like **user authentication, browsing space tour packages, real-time price updates, a simulated checkout, AI-powered recommendations, a chatbot, and an AR view**. The design follows a dark, neon-accented theme inspired by Dubai’s futuristic architecture. Below we walk through the complete codebase, architecture, and design.
