@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import '@google/model-viewer';
+// Remove the direct import that's causing the error
+// import '@google/model-viewer';
 
 export default function ModelViewer({ 
   modelPath, 
@@ -13,11 +14,27 @@ export default function ModelViewer({
   const modelViewerRef = useRef(null);
 
   useEffect(() => {
-    // Make sure model-viewer is defined (it's loaded via script in layout)
-    if (typeof window !== 'undefined' && !customElements.get('model-viewer')) {
-      console.warn('model-viewer is not defined. Make sure to include the script in your layout.');
+    // Dynamically import model-viewer only on client side
+    const loadModelViewer = async () => {
+      try {
+        await import('@google/model-viewer');
+      } catch (error) {
+        console.error('Error loading model-viewer:', error);
+      }
+    };
+
+    // Make sure window is defined (client-side only)
+    if (typeof window !== 'undefined') {
+      loadModelViewer();
     }
   }, []);
+
+  // Check if we're on the server side
+  if (typeof window === 'undefined') {
+    return <div className="ar-container w-full h-[500px] rounded-lg overflow-hidden shadow-xl border border-primary/20 bg-gray-800 flex items-center justify-center">
+      <p className="text-white">AR Viewer loading...</p>
+    </div>;
+  }
 
   return (
     <div className="ar-container w-full h-[500px] rounded-lg overflow-hidden shadow-xl border border-primary/20">

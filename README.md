@@ -93,6 +93,35 @@ yarn install
 
 Create a `.env.local` file in the root directory using the provided `.env.local.example` template. Fill in the Firebase and Claude API credentials.
 
+### 4. Seed the database (optional)
+
+To populate your Firebase Firestore with sample space travel packages:
+
+1. Add your Firebase Admin SDK service account key to `.env.local`:
+   ```
+   FIREBASE_SERVICE_ACCOUNT='{"type":"service_account","project_id":"your-project-id",...}'
+   ```
+
+2. Run the seeding script:
+   ```bash
+   node scripts/seed-packages.js
+   ```
+
+   Use the `--force` flag to overwrite existing packages:
+   ```bash
+   node scripts/seed-packages.js --force
+   ```
+
+### 5. Start the development server
+
+```bash
+npm run dev
+# or
+yarn dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) in your browser to see the application.
+
 ## 📊 Implementation Status
 
 Here's what has been implemented in the current version of the application:
@@ -104,14 +133,18 @@ Here's what has been implemented in the current version of the application:
 - ✅ Claude AI integration for chatbot and recommendations
 - ✅ AR visualization with model-viewer
 - ✅ Homepage with featured packages
+- ✅ Package detail pages with AR visualization
+- ✅ Package listing page with filtering and sorting
 - ✅ Responsive navbar and footer components
 - ✅ Chatbot component for user assistance
+- ✅ Sign-up page with email/password and social login
+- ✅ Database seeding script for packages
+- ✅ Documentation for Firebase Function price updates
 
 Coming soon:
-- ⬜ Package listing and details pages
 - ⬜ Checkout and booking system
 - ⬜ User profile and favorites functionality
-- ⬜ Cloud Functions for price updates
+- ⬜ Cloud Functions implementation for price updates
 - ⬜ Push notification implementation
 - ⬜ Admin panel for managing packages
 
@@ -201,6 +234,204 @@ exports.updatePrices = functions.pubsub.schedule('every 10 minutes').onRun(async
   return null;
 });
 ```
+
+### Firebase Functions for Real-time Price Updates
+
+For a more dynamic user experience, you may want price updates to occur more frequently than Cloud Scheduler's minimum interval of 1 minute. Below are detailed instructions for setting up and deploying functions with different frequency options.
+
+#### Setting Up Firebase Functions
+
+1. **Install Firebase CLI** (if not already done):
+   ```bash
+   npm install -g firebase-tools
+   ```
+
+2. **Login to Firebase**:
+   ```bash
+   firebase login
+   ```
+
+3. **Initialize Firebase Functions in your project**:
+   ```bash
+   firebase init functions
+   ```
+   - Select JavaScript or TypeScript
+   - Choose whether to use ESLint
+   - Install dependencies with npm when prompted
+
+4. **Configure Functions for Frequent Updates**:
+
+   There are two main approaches for creating frequent updates:
+
+   **Option 1: Cloud Scheduler (Minimum 1 minute interval)**
+   ```javascript
+   // functions/index.js
+   const functions = require("firebase-functions");
+   const admin = require("firebase-admin");
+   admin.initializeApp();
+
+   // This function will run every minute (minimum interval for Cloud Scheduler)
+   exports.updatePrices = functions.pubsub.schedule('every 1 minutes').onRun(async (context) => {
+     const packagesSnapshot = await admin.firestore().collection('packages').get();
+     
+     packagesSnapshot.forEach(doc => {
+       const data = doc.data();
+       const min = data.minPrice || 0;
+       const max = data.maxPrice || 0;
+       
+       if (min && max && max > min) {
+         // Generate new random price
+         const newPrice = Math.floor(Math.random() * (max - min + 1)) + min;
+         
+         // Update the document
+         doc.ref.update({ 
+           price: newPrice,
+           updatedAt: admin.firestore.FieldValue.serverTimestamp() 
+         });
+       }
+     });
+     
+     console.log('Prices updated at', new Date().toISOString());
+     return null;
+   });
+   ```
+
+   **Option 2: Real-time Database Trigger (For more frequent updates - ~15 seconds)**
+   ```javascript
+   // functions/index.js
+   const functions = require("firebase-functions");
+   const admin = require("firebase-admin");
+   admin.initializeApp();
+
+   // This function responds to changes in a trigger document
+   exports.updatePricesOnTrigger = functions.firestore
+     .document('system/priceUpdateTrigger')
+     .onUpdate(async (change, context) => {
+       const newValue = change.after.data();
+       const previousValue = change.before.data();
+       
+       // Only run if the trigger timestamp has changed
+       if (newValue.timestamp === previousValue.timestamp) {
+         console.log('Skipping redundant update');
+         return null;
+       }
+       
+       const packagesSnapshot = await admin.firestore().collection('packages').get();
+       
+       packagesSnapshot.forEach(doc => {
+         const data = doc.data();
+         const min = data.minPrice || 0;
+         const max = data.maxPrice || 0;
+         
+         if (min && max && max > min) {
+           // Generate new random price
+           const newPrice = Math.floor(Math.random() * (max - min + 1)) + min;
+           
+           // Update the document
+           doc.ref.update({ 
+             price: newPrice,
+             updatedAt: admin.firestore.FieldValue.serverTimestamp() 
+           });
+         }
+       });
+       
+       console.log('Prices updated at', new Date().toISOString());
+       return null;
+     });
+
+   // You'll need a client or another function to update the trigger document
+   ```
+
+5. **Setting up a 15-second trigger with a helper function**:
+
+   To achieve updates approximately every 15 seconds, we can create an additional helper function:
+
+   ```javascript
+   // functions/index.js
+   
+   // Add this alongside your other functions
+   exports.triggerPriceUpdates = functions.pubsub.schedule('every 1 minutes').onRun(async (context) => {
+     // Create timestamps for 4 updates (roughly every 15 seconds)
+     const now = Date.now();
+     const batch = admin.firestore().batch();
+     const triggerRef = admin.firestore().doc('system/priceUpdateTrigger');
+     
+     // Schedule initial update immediately
+     batch.set(triggerRef, { timestamp: now });
+     await batch.commit();
+     
+     // Schedule the remaining updates with setTimeout
+     setTimeout(async () => {
+       await triggerRef.set({ timestamp: now + 15000 });
+       console.log('Trigger 1 set');
+     }, 15000);
+     
+     setTimeout(async () => {
+       await triggerRef.set({ timestamp: now + 30000 });
+       console.log('Trigger 2 set');
+     }, 30000);
+     
+     setTimeout(async () => {
+       await triggerRef.set({ timestamp: now + 45000 });
+       console.log('Trigger 3 set');
+     }, 45000);
+     
+     return null;
+   });
+   ```
+
+   **Important**: Before deploying, create the trigger document manually:
+   ```javascript
+   // Use Firebase Admin SDK or the Firebase Console
+   admin.firestore().doc('system/priceUpdateTrigger').set({
+     timestamp: Date.now()
+   });
+   ```
+
+6. **Deploying Firebase Functions**:
+
+   ```bash
+   firebase deploy --only functions
+   ```
+
+   To deploy a specific function:
+   ```bash
+   firebase deploy --only functions:updatePrices,functions:updatePricesOnTrigger,functions:triggerPriceUpdates
+   ```
+
+7. **Monitoring Your Functions**:
+
+   - View logs and executions in the Firebase Console under "Functions"
+   - Check Cloud Scheduler jobs in the Google Cloud Console
+   - Use the Firebase CLI to view logs:
+     ```bash
+     firebase functions:log
+     ```
+
+8. **Cost Considerations**:
+
+   Be aware that running functions very frequently can increase your billing costs:
+   - Cloud Functions are billed based on invocations, compute time, and network usage
+   - Firestore operations (reads/writes) are also billed separately
+   - The Spark (free) plan has limits on function invocations and Firestore operations
+   - Consider implementing rate limiting or reducing frequency in production
+
+9. **Additional Configuration Options**:
+
+   Set memory allocation and timeout for your functions:
+   ```javascript
+   exports.updatePrices = functions
+     .runWith({
+       timeoutSeconds: 60,
+       memory: '256MB'
+     })
+     .pubsub.schedule('every 1 minutes')
+     .onRun(async (context) => {
+       // Function logic
+     });
+   ```
+
+By following these steps, you'll have a system that updates package prices approximately every 15 seconds, providing a more dynamic real-time experience for your users.
 
 7. **Set up Push Notifications (FCM)**:
    - Enable Firebase Cloud Messaging

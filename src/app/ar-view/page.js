@@ -2,6 +2,7 @@
 
 import Layout from '@/components/layout/Layout';
 import ModelViewer from '@/components/AR/ModelViewer';
+import ModelViewerScript from '@/components/AR/ModelViewerScript';
 import { useState } from 'react';
 
 export default function ARViewPage() {
@@ -30,6 +31,8 @@ export default function ARViewPage() {
   
   return (
     <Layout>
+      <ModelViewerScript />
+      
       <div className="container mx-auto px-4 py-10">
         <h1 className="text-4xl md:text-5xl font-bold mb-2 text-white neon-text text-center">
           AR Experience
