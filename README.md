@@ -1,36 +1,477 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Space Travel Booking App 🚀
 
-## Getting Started
+A futuristic space travel booking web application with user authentication, real-time price updates, AI-powered recommendations, a chatbot assistant, and AR visualization features.
 
-First, run the development server:
+## 📋 Table of Contents
+
+- [Overview](#overview)
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+- [Prerequisites](#prerequisites)
+- [Getting Started](#getting-started)
+- [Implementation Status](#implementation-status)
+- [External Services Setup](#external-services-setup)
+  - [Firebase Setup](#firebase-setup)
+  - [Anthropic Claude API Setup](#anthropic-claude-api-setup)
+  - [AR Model Setup](#ar-model-setup)
+- [Development](#development)
+- [Deployment](#deployment)
+- [Project Structure](#project-structure)
+- [Contributing](#contributing)
+- [License](#license)
+
+## 🌌 Overview
+
+This Space Travel Booking App offers users the ability to browse futuristic space travel packages, view real-time price updates, book trips with a simulated payment system, get AI-powered recommendations, interact with a chatbot, and visualize destinations through AR technology. The app features a dark, neon-accented UI inspired by Dubai's futuristic architecture.
+
+## ✨ Features
+
+- **User Authentication**: Email/password, Google, and Apple sign-in
+- **Package Browsing**: View available space travel packages with details
+- **Real-time Price Updates**: Dynamic pricing that changes periodically
+- **Simulated Checkout**: Book trips with a simulated payment system
+- **AI-Powered Recommendations**: Personalized travel suggestions based on preferences
+- **Chatbot Assistant**: Answer user questions about travel packages
+- **AR Visualization**: View 3D models of spaceships or destinations
+- **User Profiles**: Save favorites and view booking history
+- **Push Notifications**: Receive alerts for price drops or new deals
+- **Responsive Design**: Works on mobile, tablet, and desktop devices
+
+## 🔧 Tech Stack
+
+- **Frontend**:
+  - [Next.js](https://nextjs.org/) - React framework
+  - [Tailwind CSS](https://tailwindcss.com/) - Utility-first CSS
+  - [shadcn/ui](https://ui.shadcn.com/) - Reusable UI components
+  - [21st.dev](https://21st.dev/) - Additional UI components
+  - [model-viewer](https://modelviewer.dev/) - 3D model viewing with AR support
+
+- **Backend**:
+  - [Firebase Authentication](https://firebase.google.com/products/auth) - User authentication
+  - [Cloud Firestore](https://firebase.google.com/products/firestore) - Database
+  - [Cloud Functions](https://firebase.google.com/products/functions) - Serverless functions
+  - [Cloud Storage](https://firebase.google.com/products/storage) - File storage
+  - [Cloud Messaging](https://firebase.google.com/products/cloud-messaging) - Push notifications
+
+- **AI/ML**:
+  - [Anthropic Claude API](https://www.anthropic.com/claude) - Chatbot and recommendations
+
+- **Deployment**:
+  - [Vercel](https://vercel.com/) - Frontend deployment
+  - [Firebase Hosting](https://firebase.google.com/products/hosting) - Backend deployment
+
+## 📋 Prerequisites
+
+Before you begin, ensure you have:
+
+- [Node.js](https://nodejs.org/) (v16 or newer)
+- [npm](https://www.npmjs.com/) or [yarn](https://yarnpkg.com/)
+- [Firebase CLI](https://firebase.google.com/docs/cli)
+- [Git](https://git-scm.com/)
+- A Firebase account
+- An Anthropic API key (for Claude integration)
+- A Vercel account (for deployment)
+
+## 🚀 Getting Started
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/yourusername/space-travel-booking.git
+cd space-travel-booking
+```
+
+### 2. Install dependencies
+
+```bash
+npm install
+# or
+yarn install
+```
+
+### 3. Set up environment variables
+
+Create a `.env.local` file in the root directory using the provided `.env.local.example` template. Fill in the Firebase and Claude API credentials.
+
+## 📊 Implementation Status
+
+Here's what has been implemented in the current version of the application:
+
+- ✅ Project structure and basic setup
+- ✅ Firebase integration (Auth, Firestore, Storage)
+- ✅ Authentication system with context
+- ✅ Dark, futuristic UI with Tailwind CSS
+- ✅ Claude AI integration for chatbot and recommendations
+- ✅ AR visualization with model-viewer
+- ✅ Homepage with featured packages
+- ✅ Responsive navbar and footer components
+- ✅ Chatbot component for user assistance
+
+Coming soon:
+- ⬜ Package listing and details pages
+- ⬜ Checkout and booking system
+- ⬜ User profile and favorites functionality
+- ⬜ Cloud Functions for price updates
+- ⬜ Push notification implementation
+- ⬜ Admin panel for managing packages
+
+## 🔌 External Services Setup
+
+### Firebase Setup
+
+1. **Create a Firebase project**:
+   - Go to the [Firebase Console](https://console.firebase.google.com/)
+   - Click "Add project" and follow the prompts
+   - Enable Google Analytics if desired
+
+2. **Setup Authentication**:
+   - In Firebase Console, go to "Authentication" > "Sign-in method"
+   - Enable Email/Password authentication
+   - Enable Google authentication
+   - For Apple authentication:
+     - Register a Service ID with Apple Developer
+     - Follow [Firebase Apple Auth Setup](https://firebase.google.com/docs/auth/web/apple)
+     - Add your domain to the authorized domains list
+
+3. **Create a Firestore Database**:
+   - Go to "Firestore Database" and click "Create database"
+   - Choose "Start in production mode"
+   - Select a location for your database
+   - Create the following collections:
+     - `packages` (space travel packages)
+     - `bookings` (user bookings)
+     - `users` (user profiles and favorites)
+
+4. **Set up Cloud Storage**:
+   - Go to "Storage" and click "Get started"
+   - Follow the setup steps
+   - This will be used for storing images and 3D models
+
+5. **Configure Security Rules**:
+   - Update Firestore security rules to allow appropriate access
+   - Example basic rules:
+
+```
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /packages/{package} {
+      allow read: if true;  // Anyone can read packages
+      allow write: if false;  // Only admins via Functions can write
+    }
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;  // Users can only access their own data
+    }
+    match /bookings/{booking} {
+      allow read, write: if request.auth != null && 
+                           (resource.data.userId == request.auth.uid || 
+                            request.resource.data.userId == request.auth.uid);  // Users can only access their own bookings
+    }
+  }
+}
+```
+
+6. **Set up Cloud Functions**:
+   - Initialize Firebase Functions in your project:
+
+```bash
+firebase init functions
+```
+
+   - Create a function to update prices periodically:
+
+```javascript
+// functions/index.js
+const functions = require("firebase-functions");
+const admin = require("firebase-admin");
+admin.initializeApp();
+
+exports.updatePrices = functions.pubsub.schedule('every 10 minutes').onRun(async (context) => {
+  const packagesSnapshot = await admin.firestore().collection('packages').get();
+  packagesSnapshot.forEach(doc => {
+    const data = doc.data();
+    const min = data.minPrice || 0;
+    const max = data.maxPrice || 0;
+    if (min && max && max > min) {
+      const newPrice = Math.floor(Math.random() * (max - min + 1)) + min;
+      doc.ref.update({ price: newPrice });
+    }
+  });
+  console.log('Prices updated');
+  return null;
+});
+```
+
+7. **Set up Push Notifications (FCM)**:
+   - Enable Firebase Cloud Messaging
+   - Generate a VAPID key for web push notifications
+   - Add a service worker file in your public directory:
+
+```javascript
+// public/firebase-messaging-sw.js
+importScripts('https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/9.0.0/firebase-messaging-compat.js');
+
+firebase.initializeApp({
+  apiKey: 'your-api-key',
+  authDomain: 'your-auth-domain',
+  projectId: 'your-project-id',
+  storageBucket: 'your-storage-bucket',
+  messagingSenderId: 'your-messaging-sender-id',
+  appId: 'your-app-id'
+});
+
+const messaging = firebase.messaging();
+
+messaging.onBackgroundMessage((payload) => {
+  console.log('Background message received: ', payload);
+  const notificationTitle = payload.notification.title;
+  const notificationOptions = {
+    body: payload.notification.body,
+    icon: '/logo.png'
+  };
+
+  self.registration.showNotification(notificationTitle, notificationOptions);
+});
+```
+
+8. **Get Firebase Configuration**:
+   - Go to Project Settings > General
+   - Scroll down to "Your apps" section
+   - Copy the Firebase config object for your web app
+   - Add these values to your `.env.local` file
+
+### Anthropic Claude API Setup
+
+1. **Get an API Key**:
+   - Sign up for access to [Anthropic's Claude API](https://www.anthropic.com/product)
+   - Once approved, generate an API key from your dashboard
+   - Add this key to your `.env.local` file as `CLAUDE_API_KEY`
+
+2. **Create API Routes**:
+   - Create a Next.js API route for the chatbot:
+
+```javascript
+// pages/api/chatbot.js
+import { Anthropic } from '@anthropic-ai/sdk';
+
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  const { conversation } = req.body;
+  
+  try {
+    const anthropic = new Anthropic({
+      apiKey: process.env.CLAUDE_API_KEY,
+    });
+    
+    const messages = conversation.map(msg => ({
+      role: msg.sender === 'user' ? 'user' : 'assistant',
+      content: msg.text
+    }));
+
+    const response = await anthropic.messages.create({
+      model: "claude-3-opus-20240229",
+      max_tokens: 1000,
+      temperature: 0.7,
+      messages: messages,
+    });
+
+    res.status(200).json({ reply: response.content[0].text });
+  } catch (error) {
+    console.error('Error calling Claude API:', error);
+    res.status(500).json({ error: 'Failed to get response from AI' });
+  }
+}
+```
+
+   - Create a similar API route for recommendations
+
+### AR Model Setup
+
+1. **Prepare 3D Models**:
+   - Create or source 3D models in GLB/GLTF format
+   - For iOS compatibility, also provide models in USDZ format
+   - Upload these models to Firebase Storage
+
+2. **Install model-viewer**:
+   - Add to your project:
+
+```bash
+npm install @google/model-viewer
+# or
+yarn add @google/model-viewer
+```
+
+3. **Add a script tag to load model-viewer** in your Next.js app:
+   - In `pages/_document.js`:
+
+```javascript
+import Document, { Html, Head, Main, NextScript } from 'next/document';
+
+class MyDocument extends Document {
+  render() {
+    return (
+      <Html>
+        <Head>
+          <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+        </Head>
+        <body>
+          <Main />
+          <NextScript />
+        </body>
+      </Html>
+    );
+  }
+}
+
+export default MyDocument;
+```
+
+## 💻 Development
+
+### 1. Start the development server
 
 ```bash
 npm run dev
 # or
 yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Populate initial data
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+You can create a script to populate Firestore with initial package data:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```javascript
+// scripts/seed-data.js
+const admin = require('firebase-admin');
+const serviceAccount = require('./serviceAccountKey.json');
 
-## Learn More
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount)
+});
 
-To learn more about Next.js, take a look at the following resources:
+const db = admin.firestore();
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+async function seedPackages() {
+  // Sample packages
+  const packages = [
+    {
+      name: "Mars Adventure",
+      destination: "Mars Base Alpha",
+      duration: 14,
+      amenities: ["Zero-G Spa", "Mars Rover Tour", "Spacesuit Rental"],
+      description: "A two-week journey to the first human colony on Mars...",
+      minPrice: 500000,
+      maxPrice: 800000,
+      price: 650000,
+      imageUrl: "https://example.com/mars.jpg"
+    },
+    // Add more packages here
+  ];
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+  const batch = db.batch();
+  
+  packages.forEach((pkg) => {
+    const docRef = db.collection('packages').doc();
+    batch.set(docRef, pkg);
+  });
 
-## Deploy on Vercel
+  await batch.commit();
+  console.log('Added sample packages to Firestore');
+}
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+seedPackages().then(() => process.exit(0));
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Run the script with:
+
+```bash
+node scripts/seed-data.js
+```
+
+## 🚢 Deployment
+
+### 1. Deploy to Vercel
+
+1. **Push your code to GitHub**
+
+2. **Connect to Vercel**:
+   - Go to [Vercel](https://vercel.com/)
+   - Create an account or sign in
+   - Click "New Project" and import your GitHub repository
+   - Configure the project settings:
+     - Framework Preset: Next.js
+     - Build Command: `npm run build` (default)
+     - Output Directory: `out` (if using static export) or default
+     - Environment Variables: Add all your `.env.local` variables
+
+3. **Deploy**:
+   - Click "Deploy"
+   - Vercel will build and deploy your application
+   - Once completed, you'll get a deployment URL
+
+### 2. Deploy Firebase Functions
+
+Deploy your Cloud Functions to Firebase:
+
+```bash
+firebase deploy --only functions
+```
+
+### 3. Update Firebase Auth Configuration
+
+1. Add your Vercel domain to the authorized domains in Firebase Authentication:
+   - Go to Firebase Console > Authentication > Settings > Authorized domains
+   - Add your Vercel domain (e.g., `your-app.vercel.app`)
+
+### 4. Set up a custom domain (optional)
+
+1. Configure a custom domain in Vercel
+2. Update Firebase Authentication authorized domains to include your custom domain
+
+## 📁 Project Structure
+
+```
+space-travel-booking/
+├── components/            # React components
+│   ├── AR/                # AR-related components
+│   ├── Auth/              # Authentication components
+│   ├── Booking/           # Booking flow components
+│   ├── Chat/              # Chatbot components
+│   ├── Layout/            # Layout components
+│   └── UI/                # UI components
+├── pages/                 # Next.js pages
+│   ├── api/               # API routes
+│   ├── _app.js            # App component
+│   ├── _document.js       # Document component
+│   ├── index.js           # Home page
+│   ├── login.js           # Login page
+│   ├── signup.js          # Signup page
+│   ├── profile.js         # User profile
+│   └── packages/          # Package pages
+├── public/                # Public assets
+│   ├── models/            # 3D models
+│   └── firebase-messaging-sw.js # FCM service worker
+├── lib/                   # Utility functions
+│   ├── firebase.js        # Firebase configuration
+│   └── auth.js            # Auth context
+├── styles/                # Global styles
+├── functions/             # Firebase Cloud Functions
+├── .env.local             # Environment variables
+└── README.md              # Project documentation
+```
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature-name`
+3. Commit your changes: `git commit -m 'Add some feature'`
+4. Push to the branch: `git push origin feature-name`
+5. Open a Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
